@@ -19,3 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This project includes code from [Swin-Transformer] and [SimMIM] by [microsoft],
+which is licensed under the MIT License. 
+See [https://github.com/microsoft/Swin-Transformer] and [https://github.com/microsoft/SimMIM] for details.
