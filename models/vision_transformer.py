@@ -100,7 +100,7 @@ class Attention(nn.Module):
       qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
     qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
     qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
-    q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
+    q, k, v = qkv[0], qkv[1], qkv[2] 
 
     q = q * self.scale
     attn = (q @ k.transpose(-2, -1))
@@ -192,7 +192,7 @@ class RelativePositionBias(nn.Module):
     coords_h = torch.arange(window_size[0])
     coords_w = torch.arange(window_size[1])
     coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  # 2, Wh, Ww
-    coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
+    coords_flatten = torch.flatten(coords, 1)                   # 2, Wh*Ww
     relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
     relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
     relative_coords[:, :, 0] += window_size[0] - 1  # shift to start from 0
@@ -211,8 +211,8 @@ class RelativePositionBias(nn.Module):
     relative_position_bias = \
         self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
             self.window_size[0] * self.window_size[1] + 1,
-            self.window_size[0] * self.window_size[1] + 1, -1)  # Wh*Ww,Wh*Ww,nH
-    return relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+            self.window_size[0] * self.window_size[1] + 1, -1)    # Wh*Ww,Wh*Ww,nH
+    return relative_position_bias.permute(2, 0, 1).contiguous()   # nH, Wh*Ww, Wh*Ww
 
 
 class VisionTransformer(nn.Module):

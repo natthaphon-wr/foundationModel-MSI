@@ -97,13 +97,13 @@ class WindowAttention(nn.Module):
     coords_h = torch.arange(self.window_size[0])
     coords_w = torch.arange(self.window_size[1])
     coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  # 2, Wh, Ww
-    coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
-    relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
-    relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
-    relative_coords[:, :, 0] += self.window_size[0] - 1  # shift to start from 0
+    coords_flatten = torch.flatten(coords, 1)                   # 2, Wh*Ww
+    relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]   # 2, Wh*Ww, Wh*Ww
+    relative_coords = relative_coords.permute(1, 2, 0).contiguous()             # Wh*Ww, Wh*Ww, 2
+    relative_coords[:, :, 0] += self.window_size[0] - 1                         # shift to start from 0
     relative_coords[:, :, 1] += self.window_size[1] - 1
     relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
-    relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
+    relative_position_index = relative_coords.sum(-1)           # Wh*Ww, Wh*Ww
     self.register_buffer("relative_position_index", relative_position_index)
 
     self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
@@ -122,14 +122,14 @@ class WindowAttention(nn.Module):
     """
     B_, N, C = x.shape
     qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-    q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
+    q, k, v = qkv[0], qkv[1], qkv[2]  
 
     q = q * self.scale
     attn = (q @ k.transpose(-2, -1))
 
     relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
       self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1)  # Wh*Ww,Wh*Ww,nH
-    relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+    relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()                # nH, Wh*Ww, Wh*Ww
     attn = attn + relative_position_bias.unsqueeze(0)
 
     if mask is not None:
@@ -193,10 +193,11 @@ class SwinTransformerBlock(nn.Module):
     self.window_size = window_size
     self.shift_size = shift_size
     self.mlp_ratio = mlp_ratio
+
+    # if window size is larger than input resolution, we don't partition windows
     if min(self.input_resolution) <= self.window_size:
-        # if window size is larger than input resolution, we don't partition windows
-        self.shift_size = 0
-        self.window_size = min(self.input_resolution)
+      self.shift_size = 0
+      self.window_size = min(self.input_resolution)
     assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
 
     self.norm1 = norm_layer(dim)
@@ -221,9 +222,9 @@ class SwinTransformerBlock(nn.Module):
                   slice(-self.shift_size, None))
       cnt = 0
       for h in h_slices:
-          for w in w_slices:
-              img_mask[:, h, w, :] = cnt
-              cnt += 1
+        for w in w_slices:
+          img_mask[:, h, w, :] = cnt
+          cnt += 1
 
       mask_windows = window_partition(img_mask, self.window_size)  # nW, window_size, window_size, 1
       mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
@@ -250,7 +251,7 @@ class SwinTransformerBlock(nn.Module):
       shifted_x = x
 
     # partition windows
-    x_windows = window_partition(shifted_x, self.window_size)  # nW*B, window_size, window_size, C
+    x_windows = window_partition(shifted_x, self.window_size)               # nW*B, window_size, window_size, C
     x_windows = x_windows.view(-1, self.window_size * self.window_size, C)  # nW*B, window_size*window_size, C
 
     # W-MSA/SW-MSA
@@ -293,7 +294,7 @@ class SwinTransformerBlock(nn.Module):
 
 
 class PatchMerging(nn.Module):
-  r""" Patch Merging Layer.
+  """ Patch Merging Layer.
 
   Args:
       input_resolution (tuple[int]): Resolution of input feature.
@@ -319,12 +320,12 @@ class PatchMerging(nn.Module):
 
     x = x.view(B, H, W, C)
 
-    x0 = x[:, 0::2, 0::2, :]  # B H/2 W/2 C
-    x1 = x[:, 1::2, 0::2, :]  # B H/2 W/2 C
-    x2 = x[:, 0::2, 1::2, :]  # B H/2 W/2 C
-    x3 = x[:, 1::2, 1::2, :]  # B H/2 W/2 C
-    x = torch.cat([x0, x1, x2, x3], -1)  # B H/2 W/2 4*C
-    x = x.view(B, -1, 4 * C)  # B H/2*W/2 4*C
+    x0 = x[:, 0::2, 0::2, :]              # B H/2 W/2 C
+    x1 = x[:, 1::2, 0::2, :]              # B H/2 W/2 C
+    x2 = x[:, 0::2, 1::2, :]              # B H/2 W/2 C
+    x3 = x[:, 1::2, 1::2, :]              # B H/2 W/2 C
+    x = torch.cat([x0, x1, x2, x3], -1)   # B H/2 W/2 4*C
+    x = x.view(B, -1, 4 * C)              # B H/2*W/2 4*C
 
     x = self.norm(x)
     x = self.reduction(x)
@@ -342,7 +343,7 @@ class PatchMerging(nn.Module):
 
 
 class BasicLayer(nn.Module):
-  """ A basic Swin Transformer layer for one stage.
+  r""" A basic Swin Transformer layer for one stage.
 
   Args:
       dim (int): Number of input channels.
@@ -412,7 +413,7 @@ class BasicLayer(nn.Module):
 
 
 class PatchEmbed(nn.Module):
-  r""" Image to Patch Embedding
+  """ Image to Patch Embedding
 
   Args:
       img_size (int): Image size.  Default: 224.

@@ -17,8 +17,6 @@ from torch import optim as optim
 def build_optimizer(config, model, logger, is_pretrain):
   if is_pretrain:
     return build_pretrain_optimizer(config, model, logger)
-  else:
-    return build_finetune_optimizer(config, model, logger)
 
 
 def build_pretrain_optimizer(config, model, logger):
@@ -66,46 +64,6 @@ def get_pretrain_param_groups(model, logger, skip_list=(), skip_keywords=()):
   logger.info(f'No decay params: {no_decay_name}')
   logger.info(f'Has decay params: {has_decay_name}')
   return [{'params': has_decay}, {'params': no_decay, 'weight_decay': 0.}]
-
-
-def build_finetune_optimizer(config, model, logger):
-  logger.info('>>>>>>>>>> Build Optimizer for Fine-tuning Stage')
-  if config.MODEL.TYPE == 'swin':
-    depths = config.MODEL.SWIN.DEPTHS
-    num_layers = sum(depths)
-    get_layer_func = partial(get_swin_layer, num_layers=num_layers + 2, depths=depths)
-  elif config.MODEL.TYPE == 'vit':
-    num_layers = config.MODEL.VIT.DEPTH
-    get_layer_func = partial(get_vit_layer, num_layers=num_layers + 2)
-  else:
-    raise NotImplementedError
-  
-  scales = list(config.TRAIN.LAYER_DECAY ** i for i in reversed(range(num_layers + 2)))
-  
-  skip = {}
-  skip_keywords = {}
-  if hasattr(model, 'no_weight_decay'):
-    skip = model.no_weight_decay()
-    logger.info(f'No weight decay: {skip}')
-  if hasattr(model, 'no_weight_decay_keywords'):
-    skip_keywords = model.no_weight_decay_keywords()
-    logger.info(f'No weight decay keywords: {skip_keywords}')
-
-  parameters = get_finetune_param_groups(
-    model, logger, config.TRAIN.BASE_LR, config.TRAIN.WEIGHT_DECAY,
-    get_layer_func, scales, skip, skip_keywords)
-    
-  opt_lower = config.TRAIN.OPTIMIZER.NAME.lower()
-  optimizer = None
-  if opt_lower == 'sgd':
-    optimizer = optim.SGD(parameters, momentum=config.TRAIN.OPTIMIZER.MOMENTUM, nesterov=True,
-                          lr=config.TRAIN.BASE_LR, weight_decay=config.TRAIN.WEIGHT_DECAY)
-  elif opt_lower == 'adamw':
-    optimizer = optim.AdamW(parameters, eps=config.TRAIN.OPTIMIZER.EPS, betas=config.TRAIN.OPTIMIZER.BETAS,
-                            lr=config.TRAIN.BASE_LR, weight_decay=config.TRAIN.WEIGHT_DECAY)
-
-  logger.info(optimizer)
-  return optimizer
 
 
 def get_vit_layer(name, num_layers):
