@@ -21,10 +21,10 @@ import torch.distributed as dist
 from timm.utils import AverageMeter
 
 from config import get_config
-from models import build_model
-from data import build_loader
+from models import build_simmim
+from data import build_loader_simmim
 from lr_scheduler import build_scheduler
-from optimizer import build_optimizer
+from optimizer import build_pretrain_optimizer
 from logger import create_logger
 from utils import load_checkpoint, save_checkpoint, get_grad_norm, auto_resume_helper
 
@@ -66,14 +66,15 @@ def parse_option():
   return args, config
 
 def main(config):
-  data_loader_train = build_loader(config, logger, is_pretrain=True)
+  data_loader_train = build_loader_simmim(config, logger)
 
   logger.info(f"Creating model:{config.MODEL.TYPE}/{config.MODEL.NAME}")
-  model = build_model(config, is_pretrain=True)
+  model = build_simmim(config)
   model.cuda()
   logger.info(str(model))
 
-  optimizer = build_optimizer(config, model, logger, is_pretrain=True)
+  optimizer = build_pretrain_optimizer(config, model, logger)
+
   if config.AMP_OPT_LEVEL != "O0":
     model, optimizer = amp.initialize(model, optimizer, opt_level=config.AMP_OPT_LEVEL)
   model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[config.LOCAL_RANK], broadcast_buffers=False)

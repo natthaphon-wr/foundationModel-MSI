@@ -1,1 +1,1 @@
-from .build import build_model
+from .simmim import build_simmim
